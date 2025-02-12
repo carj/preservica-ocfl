@@ -5,6 +5,18 @@
 This library provides a Python module which will create a local OCFL storage structure from a Preservica repository.
 Content is exported from Preservica using the API and saved locally in a OCFL compliant structure.
 
+This Oxford Common File Layout (OCFL) specification describes an application-independent approach to the storage of digital information in a structured, transparent, and predictable manner. It is designed to promote long-term object management best practices within digital repositories.
+
+https://ocfl.io/
+
+Specifically, the benefits of the OCFL include:
+
+Completeness, so that a repository can be rebuilt from the files it stores
+Parsability, both by humans and machines, to ensure content can be understood in the absence of original software
+Robustness against errors, corruption, and migration between storage technologies
+Versioning, so repositories can make changes to objects allowing their history to persist
+Storage diversity, to ensure content can be stored on diverse storage infrastructures including conventional filesystems and cloud object stores
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/carj/preserva-ocfl
