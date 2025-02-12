@@ -11,11 +11,11 @@ https://ocfl.io/
 
 Specifically, the benefits of the OCFL include:
 
-Completeness, so that a repository can be rebuilt from the files it stores
-Parsability, both by humans and machines, to ensure content can be understood in the absence of original software
-Robustness against errors, corruption, and migration between storage technologies
-Versioning, so repositories can make changes to objects allowing their history to persist
-Storage diversity, to ensure content can be stored on diverse storage infrastructures including conventional filesystems and cloud object stores
+* Completeness, so that a repository can be rebuilt from the files it stores
+* Parsability, both by humans and machines, to ensure content can be understood in the absence of original software
+* Robustness against errors, corruption, and migration between storage technologies
+* Versioning, so repositories can make changes to objects allowing their history to persist
+* Storage diversity, to ensure content can be stored on diverse storage infrastructures including conventional filesystems and cloud object stores
 
 ## Contributing
 
