@@ -1,21 +1,30 @@
 # preserva-ocfl
 
-## Create a Preservica repository as a local OCFL storage structure
+## Replicate a Preservica repository as a local OCFL storage structure
 
 This library provides a Python module which will create a local OCFL storage structure from a Preservica repository.
 Content is exported from Preservica using the API and saved locally in a OCFL compliant structure.
 
-This Oxford Common File Layout (OCFL) specification describes an application-independent approach to the storage of digital information in a structured, transparent, and predictable manner. It is designed to promote long-term object management best practices within digital repositories.
+This Oxford Common File Layout (OCFL) specification describes an application-independent approach to the 
+storage of digital information in a structured, transparent, and predictable manner. 
+It is designed to promote long-term object management best practices within digital repositories.
 
 https://ocfl.io/
 
-Specifically, the benefits of the OCFL include:
+This project uses the OCFL Core https://github.com/inveniosoftware/ocflcore library to create the OCFL inventory 
+metadata.
 
-* Completeness, so that a repository can be rebuilt from the files it stores
-* Parsability, both by humans and machines, to ensure content can be understood in the absence of original software
-* Robustness against errors, corruption, and migration between storage technologies
-* Versioning, so repositories can make changes to objects allowing their history to persist
-* Storage diversity, to ensure content can be stored on diverse storage infrastructures including conventional filesystems and cloud object stores
+## Limitations
+
+The preserva-ocfl module creates OCFL specification 1.1 file structures. It does not support the OCFL 1.0 specification.
+
+The library creates OCFL objects from each Preservica Asset. It currently does not look for modifications in Preservica
+to create new OCFL versions. Each Asset in Preservica is mapped to a v1 OCFL object. 
+
+If OCFL objects already exist for a Preservica Asset then they will be ignored. 
+
+
+
 
 ## Contributing
 
@@ -23,7 +32,7 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/carj/p
 
 ## Support 
 
-preserva-ocfl is 3rd party open source client and is not affiliated or supported by Preservica Ltd.
+preserva-ocfl is 3rd party open source library and is not affiliated or supported by Preservica Ltd.
 There is no support for use of the library by Preservica Ltd.
 Bug reports can be raised directly on GitHub.
 
