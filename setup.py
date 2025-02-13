@@ -9,7 +9,7 @@ HERE = pathlib.Path(__file__).parent
 # The text of the README file
 README = (HERE / "README.md").read_text(encoding="utf-8")
 
-PKG = "preserva-ocfl"
+PKG = "preservica-ocfl"
 
 # 'setup.py publish' shortcut.
 if sys.argv[-1] == 'publish':
@@ -29,7 +29,7 @@ setup(
     author="James Carr",
     author_email="drjamescarr@gmail.com",
     license="Apache License 2.0",
-    packages=["preserva-ocfl"],
+    packages=["preservica-ocfl"],
     classifiers=[
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',

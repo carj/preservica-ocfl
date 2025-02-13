@@ -17,7 +17,7 @@ metadata.
 
 ## Limitations
 
-The preserva-ocfl module creates OCFL specification 1.1 file structures. It does not support the OCFL 1.0 specification.
+The preservica-ocfl module creates OCFL specification 1.1 file structures. It does not support the OCFL 1.0 specification.
 
 The library creates OCFL objects from each Preservica Asset. It currently does not look for modifications in Preservica
 to create new OCFL versions. Each Asset in Preservica is mapped to a v1 OCFL object. 
@@ -35,11 +35,11 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/carj/p
 
 ## Support 
 
-preserva-ocfl is 3rd party open source library and is not affiliated or supported by Preservica Ltd.
+preservica-ocfl is 3rd party open source library and is not affiliated or supported by Preservica Ltd.
 There is no support for use of the library by Preservica Ltd.
 Bug reports can be raised directly on GitHub.
 
-Users of preserva-ocfl should make sure they are licensed to use the Preservica REST APIs. 
+Users of preservica-ocfl should make sure they are licensed to use the Preservica REST APIs. 
 
 ## License
 
@@ -47,20 +47,20 @@ The package is available as open source under the terms of the Apache License 2.
 
 ## Installation
 
-preserva-ocfl is available from the Python Package Index (PyPI)
+preservica-ocfl is available from the Python Package Index (PyPI)
 
 https://pypi.org/project/preserva-ocfl/
 
-To install preserva-ocfl, simply run this simple command in your terminal of choice:
+To install preservica-ocfl, simply run this simple command in your terminal of choice:
 
-    $ pip install preserva-ocfl
+    $ pip install preservica-ocfl
 
 
 
-    $ python -m preserva-ocfl -r STORAGE_ROOT -c a7ad52e3-2cb3-4cb5-af2a-3ab08829a2a8
+    $ python -m preservica-ocfl -r STORAGE_ROOT -c a7ad52e3-2cb3-4cb5-af2a-3ab08829a2a8
     
     ```
-    usage: preserva-ocfl [-h] -r STORAGE_ROOT [-c COLLECTION] [-t THREADS] [-d DIRECTORY_DEPTH] [--parent-folders PARENT_FOLDERS] [-u USERNAME] [-p PASSWORD] [-s SERVER]
+    usage: preservica-ocfl [-h] -r STORAGE_ROOT [-c COLLECTION] [-t THREADS] [-d DIRECTORY_DEPTH] [--parent-folders PARENT_FOLDERS] [-u USERNAME] [-p PASSWORD] [-s SERVER]
 
     Create a local OCFL storage root from a Preservica repository
     
