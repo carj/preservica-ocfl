@@ -22,7 +22,7 @@ if sys.argv[-1] == 'publish':
 setup(
     name=PKG,
     version="0.0.1",
-    description="Python module for creating a local OCFL storage from a Preservica repository",
+    description="Python module for creating a local OCFL storage structure from a Preservica repository",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/carj/preserva-ocfl",

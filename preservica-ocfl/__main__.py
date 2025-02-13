@@ -81,6 +81,11 @@ class TruncatedNTripleUuid(StorageLayout):
     Truncated n-tuple Tree use 2 hex digits for each level of the first (32 bits) part of the uuid
 
     """
+
+    def __init__(self, parts: int = 1):
+        self.parts = parts
+
+
     description = """
         Object structure is truncated n-tuple Tree which use 2 hex digits for each 
         level of the first (32 bits) part of the Preservica uuid
@@ -91,14 +96,14 @@ class TruncatedNTripleUuid(StorageLayout):
         object_id = uuid.UUID(obj.id)
         dir_paths = str(hex(object_id.fields[0])).replace("0x", "")
         object_path = "."
-        for i in range(0, 7, 2):
+        for i in range(0, (self.parts*2)-1, 2):
             object_path = os.path.join(object_path, dir_paths[i:i + 2])
         object_path = os.path.join(object_path, obj.id)
 
         return object_path
 
 
-def export_opex(entity: EntityAPI, reference: str, repository: PreservicaRepository) -> str:
+def export_opex(entity: EntityAPI, reference: str, repository: PreservicaRepository, parent_folders: bool) -> str:
     """
     Export the asset as an OPEX package
 
@@ -111,28 +116,33 @@ def export_opex(entity: EntityAPI, reference: str, repository: PreservicaReposit
     # Export the Asset block waiting for the opex package to be downloaded.
     asset: Asset = entity.asset(reference)
     opex_package = entity.export_opex_sync(asset, IncludeContent="Content", IncludeMetadata="Metadata",
-                                           IncludedGenerations="All", IncludeParentHierarchy="false")
+                                           IncludedGenerations="All", IncludeParentHierarchy="true")
 
     # Create the OCFL object
     ocfl_version = PreservicaVersion(datetime.now(timezone.utc), entity.username, f"{entity.server} ({entity.tenant})")
 
-    ocfl_object = OCFLObject(reference)
-
     # Unzip the OPEX package into the correct folders
     with zipfile.ZipFile(opex_package, "r") as zip_ref:
-        for f in zip_ref.filelist:
-            if f.filename.endswith(".pax.zip.opex"):
-                ocfl_file: StreamDigest = StreamDigest(BytesIO(zip_ref.read(f)))
-                ocfl_version.files.add(f.filename, ocfl_file.stream, ocfl_file.digest)
-            elif f.filename.endswith("pax.zip"):
-                zfiledata = BytesIO(zip_ref.read(f.filename))
-                with zipfile.ZipFile(zfiledata, "r") as zip_pax_ref:
-                    for ff in zip_pax_ref.filelist:
-                        if ff.is_dir() is False:
-                            ocfl_file: StreamDigest = StreamDigest(BytesIO(zip_pax_ref.read(ff)))
-                            ocfl_version.files.add(ff.filename, ocfl_file.stream, ocfl_file.digest)
-            else:
-                sys.exit("Unexpected file in OPEX package")
+
+        if parent_folders:
+            for ff in zip_ref.filelist:
+                if ff.is_dir() is False:
+                    ocfl_file: StreamDigest = StreamDigest(BytesIO(zip_ref.read(ff)))
+                    ocfl_version.files.add(ff.filename, ocfl_file.stream, ocfl_file.digest)
+        else:
+            for f in zip_ref.filelist:
+                if f.filename.endswith(".pax.zip.opex"):
+                    ocfl_file: StreamDigest = StreamDigest(BytesIO(zip_ref.read(f)))
+                    ocfl_version.files.add(f.filename, ocfl_file.stream, ocfl_file.digest)
+                elif f.filename.endswith("pax.zip"):
+                    zfiledata = BytesIO(zip_ref.read(f.filename))
+                    with zipfile.ZipFile(zfiledata, "r") as zip_pax_ref:
+                        for ff in zip_pax_ref.filelist:
+                            if ff.is_dir() is False:
+                                ocfl_file: StreamDigest = StreamDigest(BytesIO(zip_pax_ref.read(ff)))
+                                ocfl_version.files.add(ff.filename, ocfl_file.stream, ocfl_file.digest)
+                else:
+                    sys.exit("Unexpected file in OPEX package")
 
     ocfl_object = OCFLObject(reference)
     ocfl_object.versions.append(ocfl_version)
@@ -145,7 +155,11 @@ def object_added(future: Future):
     obj_id = future.result()
     logger.info(f"Object {obj_id} added to OCFL storage root")
 
-def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI, search: ContentAPI, num_threads: int):
+def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI, search: ContentAPI, num_threads: int, parent_folders: bool = False):
+    """
+    Search the repository for Assets and export them as OPEX packages
+
+    """
 
     filter_values = {"xip.document_type": "IO"}
     if folder is not None:
@@ -169,7 +183,7 @@ def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI
                 logger.info(f"Object {reference} already exists in the OCFL storage root. Skipping...")
                 continue
 
-            future: Future = executor.submit(export_opex, entity, reference, repository)
+            future: Future = executor.submit(export_opex, entity, reference, repository, parent_folders)
             future.add_done_callback(object_added)
 
             logger.info(f"Processing item {count} of {num_hits}:  Asset {reference}")
@@ -188,16 +202,26 @@ def init(args):
     username = cmd_line['username']
     password = cmd_line['password']
     server = cmd_line['server']
+    if 'parent_folders' in cmd_line:
+        parent_folders: bool = cmd_line['parent_folders']
+    else:
+        parent_folders: bool = False
+
+    num_threads = int(cmd_line['threads'])
+
+    directory_depth = int(cmd_line['directory_depth'])
+    if directory_depth not in [1, 2, 3, 4]:
+        directory_depth = 2
 
 
-    num_threads = cmd_line['threads']
 
+    # Limit the number of OPEX export workflows
     if num_threads < 1:
         num_threads = 1
     if num_threads > 8:
         num_threads = 8
 
-
+    # create the pyPreservica objects
     if (username is not None) and (password is not None) and (server is not None):
         logger.info(f"Using credentials from command line")
         entity: EntityAPI = EntityAPI(username=username, password=password, server=server)
@@ -206,6 +230,8 @@ def init(args):
         entity: EntityAPI = EntityAPI()
         search: ContentAPI = ContentAPI()
 
+    logger.info(entity)
+
     folder: Folder = None
     if collection is not None:
         folder = entity.folder(collection)
@@ -213,7 +239,7 @@ def init(args):
     else:
         logger.info(f"Populating OCFL storage root with objects from all collections")
 
-    root = StorageRoot(TruncatedNTripleUuid())
+    root = StorageRoot(TruncatedNTripleUuid(directory_depth))
 
     storage_root = cmd_line['storage_root']
     logger.info(f"Creating OCFL storage root at {storage_root}")
@@ -229,29 +255,41 @@ def init(args):
                 f.write(r.text)
 
 
-    populate(repository, folder, entity, search, num_threads)
+    populate(repository, folder, entity, search, num_threads, parent_folders)
 
 
 def main():
     """
     Entry point for the module when run as python -m preserva-ocfl
 
-    Sets up the command line arguments and starts either the ingest or validation
+    Sets up the command line arguments and starts the export process
 
-    :return: 0
+    :return: None
+
     """
     cmd_parser = argparse.ArgumentParser(
         prog='preserva-ocfl',
         description='Create a local OCFL storage root from a Preservica repository',
-        epilog='')
+        epilog='Preservica requires an active Export workflow, which be configured to include "Content" and "Metadata"')
 
     cmd_parser.add_argument("-r", "--storage-root", type=pathlib.Path, help="The OCFL Storage Root",
                             required=True)
-    cmd_parser.add_argument("-c", "--collection", type=str, help="The Preservica parent collection uuid",
+    cmd_parser.add_argument("-c", "--collection", type=str,
+                            help="The Preservica parent collection uuid, ignore to process the entire repository",
                             required=False)
 
     cmd_parser.add_argument("-t", "--threads", type=int, help="The number of export threads, defaults to 1",
                             required=False, default=1)
+
+    cmd_parser.add_argument("-d", "--directory-depth", type=int,
+                            help="The number of directory components below the storage root, defaults to 2 " 
+                            "Can be any of (1, 2, 3, 4)",
+                            required=False, default=2)
+
+    cmd_parser.add_argument( "--parent-folders", type=bool,
+                            help="The OCFL object includes Preservica Parent Hierarchy information. "
+                                 "This corresponding flag should also be set on the OPEX export workflow",
+                            required=False, default=False)
 
     cmd_parser.add_argument("-u", "--username", type=str,
                             help="Your Preservica username if not using credentials.properties", required=False)
