@@ -24,6 +24,9 @@ to create new OCFL versions. Each Asset in Preservica is mapped to a v1 OCFL obj
 
 If OCFL objects already exist for a Preservica Asset then they will be ignored. 
 
+The export of a large repository could be potentially slow, as every Asset needs to be exported and downloaded. 
+The performance can be improved by running multiple export workflows in parallel 
+
 ## OPEX
 
 The information stored within the OCFL object depends on the type of OPEX package exported from Preservica.
@@ -114,7 +117,12 @@ The initial OCFL storage root will be created with the following structure:
 
 
 The --directory-depth parameter can be used to control the number of directories below the storage root before the
-objects are stored. The default is 2.  The directory structure is based on the UUID of the Preservica Asset.
+objects are stored. The default is 2.  The directory structure is based on the UUID of the Preservica Asset. 
+It uses 2 hex digits from the Preservica Asset UUID for each level.
+
+Using 2 levels distributes each OCFL object into one of 65536 (256*256) different folders. 
+This means that the export of a Preservica repository with 1 million Assets would result in only around 15 Assets in each folder. 
+Preservica uses Version 4 (random) UUIDs.
 
 For example, with depth set to the default 2, the OCFL structure will look like:
 
@@ -137,7 +145,7 @@ For example, with depth set to the default 2, the OCFL structure will look like:
 
     
                                 
-The number of concurrent export workflows can be controlled using the --threads parameter. The default is 1.
+The number of concurrent export workflows can be controlled using the --threads parameter. The default is 2.
 
 
         

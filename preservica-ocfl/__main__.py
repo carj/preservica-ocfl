@@ -1,5 +1,5 @@
 """
-preserva-ocfl  module definition
+preservica-ocfl  module definition
 
 A python module for creating a local OCFL storage root from a Preservica repository
 
@@ -27,7 +27,6 @@ from pyPreservica import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 SPEC_FILE: str = "https://ocfl.io/1.1/spec/"
 ROOT_NAMASTE: str = "0=ocfl_1.1"
@@ -41,6 +40,7 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
         This stops the queue from growing too large and causing memory issues
 
     """
+
     def __init__(self, maxsize=50, *args, **kwargs):
         super(ThreadPoolExecutorWithQueueSizeLimit, self).__init__(*args, **kwargs)
         self._work_queue = queue.Queue(maxsize=maxsize)
@@ -87,23 +87,20 @@ class PreservicaRepository(OCFLRepository):
         with Transaction(self, o) as trans:
             object_path = os.path.join(trans.repository.storage._root, trans.object_path)
             if os.path.exists(object_path):
-                ver_file: str =  os.path.join(object_path, OBJECT_NAMASTE)
-                inventory_file: str = os.path.join(object_path,"inventory.json")
+                ver_file: str = os.path.join(object_path, OBJECT_NAMASTE)
+                inventory_file: str = os.path.join(object_path, "inventory.json")
                 if os.path.isfile(ver_file) and os.path.exists(inventory_file):
                     return True
         return False
 
-
-    def list(self)-> Generator:
+    def list(self) -> Generator:
         """List objects in an OCFL object root."""
         root_path = Path(self.storage._root)
-        pattern = "/".join(["*"] * (self.root.layout.parts+1))
+        pattern = "/".join(["*"] * (self.root.layout.parts + 1))
         for o in root_path.glob(pattern):
             if o.is_dir():
                 if os.path.exists(os.path.join(o, f"0=ocfl_object_{self.root.version}")):
                     yield os.path.basename(o)
-
-
 
 
 class PreservicaVersion(OCFLVersion):
@@ -112,6 +109,7 @@ class PreservicaVersion(OCFLVersion):
 
         Use the Preservica username for the OCFL user address
     """
+
     def __init__(self, creation_time, username: str, system: str, message: str = "Initial Export"):
         """Constructor."""
         super().__init__(creation_time)
@@ -139,11 +137,12 @@ class TruncatedNTripleUuid(StorageLayout):
         object_id = uuid.UUID(obj.id)
         dir_paths = str(hex(object_id.fields[0])).replace("0x", "")
         object_path = "."
-        for i in range(0, (self.parts*2)-1, 2):
+        for i in range(0, (self.parts * 2) - 1, 2):
             object_path = os.path.join(object_path, dir_paths[i:i + 2])
         object_path = os.path.join(object_path, obj.id)
 
         return object_path
+
 
 def export_opex(entity: EntityAPI, reference: str, repository: PreservicaRepository, parent_folders: bool) -> str:
     """
@@ -194,11 +193,14 @@ def export_opex(entity: EntityAPI, reference: str, repository: PreservicaReposit
 
     return ocfl_object.id
 
+
 def object_added(future: Future):
     obj_id = future.result()
     logger.info(f"Object {obj_id} added to OCFL storage root")
 
-def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI, search: ContentAPI, num_threads: int, parent_folders: bool = False):
+
+def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI, search: ContentAPI, num_threads: int,
+             parent_folders: bool = False):
     """
     Search the repository for Assets and export them as OPEX packages
 
@@ -210,11 +212,11 @@ def populate(repository: PreservicaRepository, folder: Folder, entity: EntityAPI
 
     num_hits: int = search.search_index_filter_hits(query="%", filter_values=filter_values)
 
-    print(f"Found {num_hits} objects to export")
+    logger.info(f"Found {num_hits} objects to export")
 
     count: int = 0
 
-    with ThreadPoolExecutorWithQueueSizeLimit(max_workers=num_threads, maxsize=num_threads*2) as executor:
+    with ThreadPoolExecutorWithQueueSizeLimit(max_workers=num_threads, maxsize=num_threads * 2) as executor:
 
         for hit in search.search_index_filter_list(query="%", filter_values=filter_values):
 
@@ -276,7 +278,7 @@ def init(args):
     folder: Folder = None
     if collection is not None:
         folder = entity.folder(collection)
-        logger.info(f"Populating OCFL storage root with objects from {folder.title}")
+        logger.info(f"Populating OCFL storage root with objects from collection: {folder.title}")
     else:
         logger.info(f"Populating OCFL storage root with objects from all collections")
 
@@ -314,15 +316,15 @@ def main():
                             help="The Preservica parent collection uuid, ignore to process the entire repository",
                             required=False)
 
-    cmd_parser.add_argument("-t", "--threads", type=int, help="The number of export threads, defaults to 1",
-                            required=False, default=1)
-
-    cmd_parser.add_argument("-d", "--directory-depth", type=int,
-                            help="The number of directory components below the storage root, defaults to 2 " 
-                            "Can be any of (1, 2, 3, 4)",
+    cmd_parser.add_argument("-t", "--threads", type=int, help="The number of export threads, defaults to 2",
                             required=False, default=2)
 
-    cmd_parser.add_argument( "--include-parent-folders", type=bool,
+    cmd_parser.add_argument("-d", "--directory-depth", type=int,
+                            help="The number of directory components below the storage root, defaults to 2 "
+                                 "Can be any of (1, 2, 3, 4)",
+                            required=False, default=2)
+
+    cmd_parser.add_argument("--include-parent-folders", type=bool,
                             help="The OCFL object includes Preservica Parent Hierarchy information. "
                                  "This corresponding flag should also be set on the OPEX export workflow ",
                             required=False, default=False)

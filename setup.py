@@ -21,7 +21,7 @@ if sys.argv[-1] == 'publish':
 # This call to setup() does all the work
 setup(
     name=PKG,
-    version="0.0.3",
+    version="0.0.5",
     description="Python module for creating a local OCFL storage structure from a Preservica repository",
     long_description=README,
     long_description_content_type="text/markdown",
