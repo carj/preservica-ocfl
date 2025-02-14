@@ -17,6 +17,7 @@ import logging
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, Future
 from io import BytesIO
+from typing import Generator
 
 from ocflcore import *
 from datetime import datetime, timezone
@@ -45,10 +46,41 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
         self._work_queue = queue.Queue(maxsize=maxsize)
 
 
+class PreservicaRoot(StorageRoot):
+    @property
+    def human_text(self):
+        """Human readable text of the OCFL spec."""
+        # See 4.2
+        r = requests.get("https://ocfl.io/1.1/spec/")
+        if r.status_code == 200:
+            return r.content
+        return None
+
+    @property
+    def human_text_filename(self):
+        """Filename of the OCFL spec."""
+        # See 4.2
+        return f"ocfl_{self.version}.html"
+
+
 class PreservicaRepository(OCFLRepository):
     """
         Extend the OCFLRepository to add a method to check if an object exists in the storage root
     """
+
+    def initialize(self):
+        """Initialize OCFL repository."""
+        # Write root conformace declaration - See 4.2
+        self.storage.write(self.root.namaste, BytesIO(f"ocfl_{self.root.version}\n".encode()))
+        # Write optional human readable text - See 4.1
+        if self.root.human_text is not None:
+            self.storage.write(
+                self.root.human_text_filename, BytesIO(self.root.human_text)
+            )
+        # Write optional layout file - See 4.1
+        layout_json = self.root.layout.json_bytes
+        if layout_json is not None:
+            self.storage.write("ocfl_layout.json", BytesIO(layout_json))
 
     def exists(self, obj_id):
         o = OCFLObject(obj_id)
@@ -60,6 +92,17 @@ class PreservicaRepository(OCFLRepository):
                 if os.path.isfile(ver_file) and os.path.exists(inventory_file):
                     return True
         return False
+
+
+    def list(self)-> Generator:
+        """List objects in an OCFL object root."""
+        root_path = Path(self.storage._root)
+        pattern = "/".join(["*"] * (self.root.layout.parts+1))
+        for o in root_path.glob(pattern):
+            if o.is_dir():
+                if os.path.exists(os.path.join(o, f"0=ocfl_object_{self.root.version}")):
+                    yield os.path.basename(o)
+
 
 
 
@@ -84,13 +127,13 @@ class TruncatedNTripleUuid(StorageLayout):
 
     def __init__(self, parts: int = 1):
         self.parts = parts
+        self.description = f"""Object structure is a truncated n-tuple Tree which use {self.parts} hex digits for each 
+                level of the first (32 bits) part of the Preservica uuid"""
 
-
-    description = """
-        Object structure is truncated n-tuple Tree which use 2 hex digits for each 
-        level of the first (32 bits) part of the Preservica uuid
-        """
     extension = ""
+
+    def parts(self):
+        return self.parts
 
     def path_for(self, obj):
         object_id = uuid.UUID(obj.id)
@@ -102,21 +145,21 @@ class TruncatedNTripleUuid(StorageLayout):
 
         return object_path
 
-
 def export_opex(entity: EntityAPI, reference: str, repository: PreservicaRepository, parent_folders: bool) -> str:
     """
     Export the asset as an OPEX package
 
-    :param entity: The Preservica EntityAPI object
-    :param reference: The Preservica Asset object reference
-    :param repository: The OCFL Repository object
+    :param entity:              The Preservica EntityAPI object
+    :param reference:           The Preservica Asset object reference
+    :param repository:          The OCFL Repository object
+    :param parent_folders:      Include the parent folders in the OCFL object
 
     :return: The stored OCFL object id
     """
     # Export the Asset block waiting for the opex package to be downloaded.
     asset: Asset = entity.asset(reference)
     opex_package = entity.export_opex_sync(asset, IncludeContent="Content", IncludeMetadata="Metadata",
-                                           IncludedGenerations="All", IncludeParentHierarchy="true")
+                                           IncludedGenerations="All", IncludeParentHierarchy=str(parent_folders))
 
     # Create the OCFL object
     ocfl_version = PreservicaVersion(datetime.now(timezone.utc), entity.username, f"{entity.server} ({entity.tenant})")
@@ -202,8 +245,8 @@ def init(args):
     username = cmd_line['username']
     password = cmd_line['password']
     server = cmd_line['server']
-    if 'parent_folders' in cmd_line:
-        parent_folders: bool = cmd_line['parent_folders']
+    if 'include_parent_folders' in cmd_line:
+        parent_folders: bool = cmd_line['include_parent_folders']
     else:
         parent_folders: bool = False
 
@@ -212,8 +255,6 @@ def init(args):
     directory_depth = int(cmd_line['directory_depth'])
     if directory_depth not in [1, 2, 3, 4]:
         directory_depth = 2
-
-
 
     # Limit the number of OPEX export workflows
     if num_threads < 1:
@@ -239,7 +280,7 @@ def init(args):
     else:
         logger.info(f"Populating OCFL storage root with objects from all collections")
 
-    root = StorageRoot(TruncatedNTripleUuid(directory_depth))
+    root = PreservicaRoot(TruncatedNTripleUuid(directory_depth))
 
     storage_root = cmd_line['storage_root']
     logger.info(f"Creating OCFL storage root at {storage_root}")
@@ -248,12 +289,6 @@ def init(args):
     workspace_storage = FileSystemStorage(f"{storage_root}_WRKSP")
     repository: PreservicaRepository = PreservicaRepository(root, storage, workspace_storage=workspace_storage)
     repository.initialize()
-    if os.path.exists(f"{storage_root}/ocfl_1.1.html") is False:
-        r = requests.get("https://ocfl.io/1.1/spec/")
-        if r.status_code == 200:
-            with open(f"{storage_root}/ocfl_1.1.html", "wt", encoding="utf-8") as f:
-                f.write(r.text)
-
 
     populate(repository, folder, entity, search, num_threads, parent_folders)
 
@@ -270,10 +305,11 @@ def main():
     cmd_parser = argparse.ArgumentParser(
         prog='preserva-ocfl',
         description='Create a local OCFL storage root from a Preservica repository',
-        epilog='Preservica requires an active Export workflow, which be configured to include "Content" and "Metadata"')
+        epilog='Preservica requires an active Preservica Export Workflow, which must be configured to include "Content" and "Metadata"')
 
     cmd_parser.add_argument("-r", "--storage-root", type=pathlib.Path, help="The OCFL Storage Root",
                             required=True)
+
     cmd_parser.add_argument("-c", "--collection", type=str,
                             help="The Preservica parent collection uuid, ignore to process the entire repository",
                             required=False)
@@ -286,9 +322,9 @@ def main():
                             "Can be any of (1, 2, 3, 4)",
                             required=False, default=2)
 
-    cmd_parser.add_argument( "--parent-folders", type=bool,
+    cmd_parser.add_argument( "--include-parent-folders", type=bool,
                             help="The OCFL object includes Preservica Parent Hierarchy information. "
-                                 "This corresponding flag should also be set on the OPEX export workflow",
+                                 "This corresponding flag should also be set on the OPEX export workflow ",
                             required=False, default=False)
 
     cmd_parser.add_argument("-u", "--username", type=str,

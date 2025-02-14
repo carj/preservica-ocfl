@@ -21,11 +21,11 @@ if sys.argv[-1] == 'publish':
 # This call to setup() does all the work
 setup(
     name=PKG,
-    version="0.0.1",
+    version="0.0.3",
     description="Python module for creating a local OCFL storage structure from a Preservica repository",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/carj/preserva-ocfl",
+    url="https://github.com/carj/preservica-ocfl",
     author="James Carr",
     author_email="drjamescarr@gmail.com",
     license="Apache License 2.0",
@@ -43,8 +43,8 @@ setup(
     keywords='Preservica API Preservation OCFL Storage',
     install_requires=["pyPreservica", "python-dateutil", "ocflcore"],
     project_urls={
-        'Documentation': 'https://github.com/carj/preserva-ocfl',
-        'Source': 'https://github.com/carj/preserva-ocfl',
-        'Discussion Forum': 'https://github.com/carj/preserva-ocfl',
+        'Documentation': 'https://github.com/carj/preservica-ocfl',
+        'Source': 'https://github.com/carj/preservica-ocfl',
+        'Discussion Forum': 'https://github.com/carj/preservica-ocfl',
     }
 )

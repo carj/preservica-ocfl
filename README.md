@@ -31,7 +31,7 @@ The information stored within the OCFL object depends on the type of OPEX packag
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/carj/preserva-ocfl
+Bug reports and pull requests are welcome on GitHub at https://github.com/carj/preservica-ocfl
 
 ## Support 
 
@@ -54,8 +54,6 @@ https://pypi.org/project/preserva-ocfl/
 To install preservica-ocfl, simply run this simple command in your terminal of choice:
 
     $ pip install preservica-ocfl
-
-
 
     $ python -m preservica-ocfl -r STORAGE_ROOT -c a7ad52e3-2cb3-4cb5-af2a-3ab08829a2a8
     
@@ -91,3 +89,55 @@ To install preservica-ocfl, simply run this simple command in your terminal of c
     
     
     ```
+
+
+
+## Usage
+
+The preserva-ocfl module uses the Preservica API to export Assets as OPEX packages. The OPEX packages are then 
+downloaded and the OCFL objects are created from the OPEX packages.
+
+The only required parameter is the storage root location for the OCFL objects. 
+The storage root is the root directory for the OCFL see https://ocfl.io/1.1/spec/#storage-root
+
+The module requires the Preservica parent collection UUID to be specified. If no collection is specified then the entire
+repository is exported.
+
+     $ python -m preserva-ocfl --storage-root "storage_root"  --collection 10f8d7aa-d477-413b-8d52-d2a5632b8e13
+
+The initial OCFL storage root will be created with the following structure:
+
+    [storage_root]
+        ├── 0=ocfl_1.1
+        ├── ocfl_1.1.html        
+        └── ocfl_layout.json    
+
+
+The --directory-depth parameter can be used to control the number of directories below the storage root before the
+objects are stored. The default is 2.  The directory structure is based on the UUID of the Preservica Asset.
+
+For example, with depth set to the default 2, the OCFL structure will look like:
+
+    [storage_root]
+            ├── 0=ocfl_1.1
+            ├── ocfl_1.1.html        
+            └── ocfl_layout.json
+            └──3b                       <- Level 1
+                └──be                   <- Level 2
+                    └──3bbe0160-ad3d-48db-8800-632db07249b6
+                            └──0=ocfl_object_1.1
+                            └──inventory.json
+                            └──inventory.json.SHA512
+                            └──v1
+                                └──inventory.json
+                                └──inventory.json.SHA512
+                                └──content
+                                        └──OPEX Package...   
+
+
+    
+                                
+The number of concurrent export workflows can be controlled using the --threads parameter. The default is 1.
+
+
+        
